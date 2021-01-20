@@ -1,0 +1,70 @@
+İlk önce repolaro güncelleyelim
+(Hem master hemde workerlarda yapılacak)
+sudo apt-get update
+
+2-) Şimdeide docker indirelim
+(Hem master hem workerlarda yapılacak)
+sudo apt-get install docker.io
+
+
+3-)dockeri enable edip çalıştır
+(hem master hemde workerlarda)
+sudo systemctl enable docker
+sudo systemctl status docker
+sudo systemctl start docker
+
+4-)Add the k8s signing Key 
+(Hem master hemde woerker)
+eğer curl yüklü değil ise bu adımı uygula
+sudo apt-get install curl
+
+curl yüklü ise yukarıdaki komutu es geç
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+5-)uygulamanın reposunu ekleyelim
+(master ve worker)
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+
+6-)Şimdi de k8s toolarını indirelim
+(master ve worker)
+sudo apt-get install kubeadm kubelet kubectl
+sudo apt-mark hold kubeadm kubelet kubectl
+
+7-)Swappof u ayarla 
+(hem master hem worker)
+sudo swapoff -a
+
+8-)Master node lar va worker nodeların hangileri olacağına karar ver.
+sudo hostnamectl set-hostname master-node (master için)
+sudo hostnamectl set-hostname worker01    (workerlar için)
+sudo hostnamectl set-hostname worker02	  (workerlar için)
+...
+
+9-)Master Node 'da kubeadm i çalıştır.
+//eğer 1den fazka ethernet interface varsa kullanmak istedğin ip yi --api-server-advertise-adres: ... olarak ver
+//kubeadm init --apiserver-advertise-address=10.21.21.29 bunun gibi 1 tane interface varsa aşağıdakini kullan.
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+bu komutun verdiği join komutunu bir yere not et, worker ları cluster a bununla dahil edeceğiz.
+
+10-)Master node üzerinde api için conf ayarlarını yap.
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+10-)Cluster networkunu deploy et(tercih edilen ve önerilen Flannel ağı)
+sudo kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+11-)yapılan işleri doğrumalak için bu komutu çalıştır.
+kubectl get pods --all-namespaces
+
+12-) kubeadm init .. komutunun çıktısını not ettiysen eğer, oluşturulan token ile diğer worker ları cluster a dahil edebiliriz.
+kubeadm join --discovery-token abcdef.1234567890abcdef --discovery-token-ca-cert-hash sha256:1234..cdef 1.2.3.4:6443
+bu komuta benzer bir komut olması gerekiyor.
+
+13-) bütün adımları doğru yaptıysan eğer 
+kubectl get nodes
+bu komut ile cluster hakkında detaylı bilgi alabilirsin.
+
+
+
+
